@@ -1,0 +1,34 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WebWatch | Uptime Monitor</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}"></head><body>
+<nav class="navbar navbar-dark"><div class="container"><a class="navbar-brand fw-bold" href="/">◉ WebWatch</a><span class="text-white-50">Website Uptime Monitoring</span></div></nav>
+<main class="container py-4"><section class="hero mb-4"><div><div class="eyebrow">MONITOR · MEASURE · RESPOND</div>
+<h1>Know when your websites are up.</h1><p>Check availability, measure response time and review monitoring history.</p></div>
+<form method="post" action="{{ url_for('check_all') }}"><button class="btn btn-light btn-lg">↻ Check all websites</button></form></section>
+{% with messages=get_flashed_messages(with_categories=true) %}{% for category,message in messages %}
+<div class="alert {{ 'alert-success' if category=='success' else 'alert-danger' }} alert-dismissible fade show">{{ message }}
+<button class="btn-close" data-bs-dismiss="alert"></button></div>{% endfor %}{% endwith %}
+<div class="row g-3 mb-4">
+{% for label,value,colour in [('Total websites',stats.total,''),('Online',stats.online,'text-success'),('Offline',stats.offline,'text-danger'),('Not checked',stats.unchecked,'')] %}
+<div class="col-6 col-lg-3"><div class="stat"><span>{{ label }}</span><strong class="{{ colour }}">{{ value }}</strong></div></div>{% endfor %}</div>
+<section class="panel mb-4"><h2>Add a website</h2><p class="hint">Enter a name and URL to start monitoring.</p>
+<form method="post" action="{{ url_for('add_website') }}" class="row g-2"><div class="col-md-4"><input class="form-control" name="name" placeholder="Website name"></div>
+<div class="col-md-6"><input class="form-control" name="url" placeholder="https://example.com" required></div>
+<div class="col-md-2 d-grid"><button class="btn btn-primary">Add website</button></div></form></section>
+<section class="panel mb-4"><h2>Monitored websites</h2><p class="hint">Run a check to refresh the status.</p>
+{% if websites %}<div class="table-responsive"><table class="table align-middle"><thead><tr><th>Website</th><th>Status</th><th>Response</th><th>Last checked (UTC)</th><th></th></tr></thead><tbody>
+{% for s in websites %}<tr><td><b>{{ s.name }}</b><br><a class="small link-secondary" href="{{ s.url }}" target="_blank" rel="noopener">{{ s.url }}</a></td>
+<td>{% if s.latest_status=='Online' %}<span class="badge online">● Online</span>{% elif s.latest_status=='Offline' %}<span class="badge offline">● Offline</span>{% else %}<span class="badge pending">Not checked</span>{% endif %}
+{% if s.latest_code %}<div class="small text-secondary">HTTP {{ s.latest_code }}</div>{% endif %}</td>
+<td>{{ s.latest_response_time|string + ' ms' if s.latest_response_time is not none else '—' }}</td>
+<td class="small text-secondary">{{ s.latest_checked_at[:19].replace('T',' ') if s.latest_checked_at else '—' }}</td>
+<td><div class="d-flex gap-2"><form method="post" action="{{ url_for('run_check',site_id=s.id) }}"><button class="btn btn-sm btn-outline-primary">Check</button></form>
+<form method="post" action="{{ url_for('delete_website',site_id=s.id) }}" onsubmit="return confirm('Delete this website and its history?')"><button class="btn btn-sm btn-outline-danger">Delete</button></form></div></td></tr>{% endfor %}
+</tbody></table></div>{% else %}<div class="empty"><h3>No websites yet</h3><p>Add your first website above.</p></div>{% endif %}</section>
+<section class="panel"><h2>Recent monitoring history</h2><p class="hint">Latest 10 checks saved in SQLite.</p>
+{% if history %}<div class="table-responsive"><table class="table"><thead><tr><th>Website</th><th>Result</th><th>Response</th><th>Checked at (UTC)</th></tr></thead><tbody>
+{% for h in history %}<tr><td>{{ h.name }}</td><td><span class="badge {{ 'online' if h.status=='Online' else 'offline' }}">{{ h.status }}</span></td><td>{{ h.response_time }} ms</td><td class="small">{{ h.checked_at[:19].replace('T',' ') }}</td></tr>{% endfor %}
+</tbody></table></div>{% else %}<p class="text-secondary mb-0">No monitoring checks have been run yet.</p>{% endif %}</section>
+<footer class="text-center text-secondary small py-4">WebWatch · Flask · SQLite · Pytest · GitHub Actions</footer></main>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script></body></html>
